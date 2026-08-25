@@ -1,0 +1,4 @@
+
+//@theme "/usr/share/rofi/themes/material.rasi"
+
+@theme "/etc/profiles/per-user/piotr/share/rofi/themes/material.rasi"

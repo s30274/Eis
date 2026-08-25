@@ -1,0 +1,57 @@
+import QtQuick.Layouts
+import QtQuick
+
+RowLayout {
+	id: root
+	property int size: 150
+	property real value: 0
+	property real percent: 0
+	property color primaryColor: "#52adff"
+	property int animationTime: 1000
+	property int maxValue: 90
+	width: size
+	height: size
+
+	//CanvasCircle {
+	//	size: root.size
+	//	primaryColor: "skyblue"
+	//	secondaryColor: "tomato"
+	//	value: 0.87
+	//}
+	
+	onValueChanged: c.degree = value / 100 * maxValue
+
+	Canvas {
+        id: c
+        property real degree: 0
+
+        anchors.fill: parent
+        antialiasing: true
+        onDegreeChanged: requestPaint()
+
+        onPaint: {
+            var ctx = getContext("2d");
+
+            var x = root.width / 2;
+            var y = root.height / 2;
+
+            var startAngle = (Math.PI / 180) * (root.maxValue / 2)
+            var progressAngle = (Math.PI / 180) * (root.maxValue / 2 + degree);
+
+            ctx.reset()
+
+            ctx.fillStyle = root.primaryColor;
+            ctx.beginPath();
+            ctx.moveTo(x,y);
+            ctx.arc(x, y, x, startAngle, progressAngle);
+            ctx.lineTo(x, y)
+            ctx.fill();
+        }
+
+        Behavior on degree {
+            NumberAnimation {
+                duration: root.animationTime
+            }
+        }
+	}
+}
