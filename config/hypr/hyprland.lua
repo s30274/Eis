@@ -96,10 +96,8 @@ hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1 @DEFAULT_
 hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"), { repeating = true, locked = true })
 hl.bind("XF86AudioMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), { repeating = true, locked = true })
 hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), { repeating = true, locked = true })
-
--- For custom global/plugin binds, wrap the string execution in a callback function
-hl.bind("XF86MonBrightnessUp", function() hl.dispatch("global, wykurwistybar:brightnessUp") end)
-hl.bind("XF86MonBrightnessDown", function() hl.dispatch("global, wykurwistybar:brightnessDown") end)
+hl.bind("XF86MonBrightnessUp", hl.dsp.global("wykurwistybar:brightnessUp"), { repeating=true, locked=true })
+hl.bind("XF86MonBrightnessDown", hl.dsp.global("global, wykurwistybar:brightnessDown"), { repeating=true, locked=true })
 
 -- Requires playerctl
 hl.bind("XF86AudioNext", hl.dsp.exec_cmd("playerctl next"), { locked = true })

@@ -47,7 +47,7 @@ PanelWindow {
 	CustomShortcut {
 		name: "brightnessDown"
 		description: "decrease brightness"
-		onPressed: decreaseBrightnessProc.running = true
+		onPressed: { if (brightness > 0) decreaseBrightnessProc.running = true }
 	}
 
 	Process {
@@ -232,7 +232,7 @@ PanelWindow {
 								// Click to switch workspaces
 								MouseArea {
 									anchors.fill: parent
-									onClicked: Hyprland.dispatch("workspace " + (index + 1))
+									onClicked: Hyprland.dispatch(`hl.dsp.focus({ workspace = ${(index + 1)}})`)
 								}
 							}
 						}

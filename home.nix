@@ -82,6 +82,9 @@ in
 	gdb
 	go
 
+	# Utilities
+	proton-vpn
+
 	# Apps
     discord
     steam
