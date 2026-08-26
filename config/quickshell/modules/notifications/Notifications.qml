@@ -48,8 +48,7 @@ Scope {
 					}
 
 					Layout.fillWidth: true
-					Layout.preferredHeight: 60
-					//Layout.preferredHeight: layout.implicitHeight + 20
+					Layout.preferredHeight: layout.implicitHeight + 20
 					radius: 8
 					color: Colors.bg
 					border.width: 2

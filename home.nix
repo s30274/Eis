@@ -79,16 +79,24 @@ in
   	# Productivity
     neovim
     gcc
-    qtcreator
+	gdb
+	go
 
 	# Apps
     discord
     steam
     spotify
+	lutris
 	localsend
+	collision
+	vlc
+
+	# Funny apps
+	hieroglyphic
 
 	# System
     rofi
+	pavucontrol
 	kdePackages.knewstuff
 	kdePackages.qqc2-desktop-style
 	kdePackages.frameworkintegration
