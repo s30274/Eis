@@ -24,6 +24,7 @@ PanelWindow {
 	property real memTotal: 0
 	property bool audioMuted: Pipewire.defaultAudioSink.audio.muted
 	property real audioVolume: Math.floor(Pipewire.defaultAudioSink.audio.volume * 100)
+	property bool batteryExists: UPower.isLaptopBattery
 	property bool batteryPlugged: !UPower.onBattery
 	property int batteryPercent: Math.floor(UPower.displayDevice.percentage * 100)
 	property int brightness: 0
@@ -346,6 +347,7 @@ PanelWindow {
 				}
 
 				Text {
+					visible: batteryExists
 					function getBatteryIcon(percent: int, isPlugged: bool): string {
 						if(isPlugged)
 							return "󰂄 "

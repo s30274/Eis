@@ -31,6 +31,9 @@
 
   programs.zsh.enable = true;
 
+  programs.steam.enable = true;
+  programs.gamemode.enable = true;
+
   users.users.piotr = {
     isNormalUser = true;
     extraGroups = [ "wheel" ]; # Enable ‘sudo’ for the user.
@@ -51,27 +54,18 @@
     git
     hyprpaper
     kdePackages.breeze
+	kdePackages.dolphin
+	kdePackages.dolphin-plugins
+	kdePackages.baloo
+	kdePackages.baloo-widgets
     xdg-desktop-portal
     hyprpolkitagent
     ntfs3g
     librewolf
   ];
 
-  xdg.portal = {
-    enable = true;
-    config = {
-      hyprland = {
-        default = [
-          "hyprland"
-          "kde"
-        ];
-      };
-    };
-    configPackages = with pkgs; [
-      xdg-desktop-portal-hyprland
-      kdePackages.xdg-desktop-portal-kde
-    ];
-  };
+  environment.etc."xdg/menus/applications.menu".source =
+    "${pkgs.kdePackages.plasma-workspace}/etc/xdg/menus/plasma-applications.menu";
 
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
 

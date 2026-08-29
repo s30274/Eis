@@ -14,7 +14,7 @@ PanelWindow {
 
 	Image {
 		anchors.fill: parent
-		source: "/home/piotr/Pictures/Wallpapers/cloudfa18c.jpg"
+		source: "/home/piotr/Pictures/Wallpapers/bluegirl.jpg"
 		fillMode: Image.PreserveAspectCrop
 	}
 }

@@ -34,7 +34,6 @@ in
     shellAliases = {
       ls = "ls --color=auto";
       grep = "grep --color=auto";
-      reload = "killall -SIGUSR2 waybar";
       vim = "nvim";
       don = "nvim";
 	  update = "sudo nixos-rebuild switch --flake ~/nixos-dotfiles#eis-btw";
@@ -83,11 +82,12 @@ in
 	go
 
 	# Utilities
+	brightnessctl
+	lm_sensors
 	proton-vpn
 
 	# Apps
     discord
-    steam
     spotify
 	lutris
 	localsend

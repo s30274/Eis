@@ -10,11 +10,10 @@ hl.on("hyprland.start", function()
     --hl.exec_cmd(passMan)
     hl.exec_cmd("systemctl --user start hyprpolkitagent")
     hl.exec_cmd("kwalletd6")
-    hl.exec_cmd("nm-applet")
-	hl.exec_cmd("blueman-applet")
+    --hl.exec_cmd("nm-applet")
+	--hl.exec_cmd("blueman-applet")
     hl.exec_cmd("quickshell")
-    hl.exec_cmd("hyprpaper")
-    hl.exec_cmd("hyprctl reload")
+    --hl.exec_cmd("hyprctl reload")
 end)
 
 
@@ -71,6 +70,7 @@ hl.bind(mainMod .. " + B", hl.dsp.exec_cmd(browser))
 hl.bind(mainMod .. " + R", hl.dsp.exec_cmd(menu))
 hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen("maximized", "toggle"))
 hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
+hl.bind(mainMod .. " + N", hl.dsp.exec_cmd("qs ipc call notifications toggle"))
 
 -- move focus/windows
 hl.bind(mainMod .. " + left", hl.dsp.focus({ direction = "left"}) )
@@ -114,10 +114,10 @@ for i = 1, 10 do
     elseif i % 2 == 1 then
         hl.workspace_rule( { workspace = i, monitor = "DP-1" } )
     end
-    hl.bind(altMod .. " + " .. key, hl.dsp.window.move( { workspace = key, follow = false } ) )
+    hl.bind(altMod .. " + " .. key, hl.dsp.window.move( { workspace = key, follow = true } ) )
 end
 
-for i = 1, 5 do
+for i = 1, 9 do
     hl.bind(mainMod .. " + " .. i, function()
         hl.dispatch(hl.dsp.focus( { workspace = i } ))
     end)
