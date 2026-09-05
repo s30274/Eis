@@ -64,6 +64,16 @@
     librewolf
   ];
 
+  # qmlls lsp
+  programs.nix-ld.enable = true;
+  programs.nix-ld.libraries = with pkgs; [
+    stdenv.cc.cc
+    zlib
+	brotli
+	unixodbc
+	glib
+  ];
+
   environment.etc."xdg/menus/applications.menu".source =
     "${pkgs.kdePackages.plasma-workspace}/etc/xdg/menus/plasma-applications.menu";
 

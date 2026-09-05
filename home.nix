@@ -80,6 +80,9 @@ in
     gcc
 	gdb
 	go
+	python3
+	nodejs_26 # ONLY FOR NEOVIM LSP
+	unzip
 
 	# Utilities
 	brightnessctl
