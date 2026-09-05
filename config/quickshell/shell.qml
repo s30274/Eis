@@ -7,6 +7,7 @@ import Quickshell
 
 ShellRoot {
 	Background {}
+	WallpaperBrowser {}
 	Topbar {}
 	Notifications {}
 }

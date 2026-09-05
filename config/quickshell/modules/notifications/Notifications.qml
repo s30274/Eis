@@ -165,7 +165,7 @@ Scope {
 					Text {
 						Layout.fillWidth: true						
 						text: "Notifications"
-						color: Colors.cyan
+						color: Colors.blue
 						font.family: Appearance.fontFamily
 						font.pixelSize: Appearance.fontSize + 2
 						font.bold: true
@@ -189,7 +189,7 @@ Scope {
 					text: "No notifications"
 					color: Colors.muted
 					font.family: Appearance.fontFamily
-					font.pixelSize: Appearance.pixelSize
+					font.pixelSize: Appearance.fontSize
 					Layout.alignment: Qt.AlignHCenter
 					Layout.topMargin: 20
 				}

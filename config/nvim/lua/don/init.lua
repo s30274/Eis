@@ -26,14 +26,38 @@ vim.lsp.config('lua_ls', {
 	},
 })
 
-vim.lsp.config('gopls', {
-  settings = {
-    gopls = {
-      staticcheck = true,
-      gofumpt = true,
-      usePlaceholders = true,
-    },
+local signs = {
+  Error = "✘ ",
+  Warn  = " ",
+  Info  = " ",
+  Hint  = "",
+}
+
+for type, icon in pairs(signs) do
+  local hl = "DiagnosticSign" .. type
+  vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = "" })
+end
+
+vim.diagnostic.config({
+  virtual_text = {
+    spacing = 4,
+    prefix = function(diagnostic)
+      local icons = {
+        [vim.diagnostic.severity.ERROR] = "✘", -- Nerd Font Error Icon
+        [vim.diagnostic.severity.WARN]  = "", -- Nerd Font Warning Icon
+        [vim.diagnostic.severity.INFO]  = "", -- Nerd Font Info Icon
+        [vim.diagnostic.severity.HINT]  = "", -- Nerd Font Hint Icon
+      }
+      return icons[diagnostic.severity] or "●"
+    end,
   },
 })
 
-
+--vim.lsp.config('gopls', {
+--  settings = {
+--    gopls = {
+--      staticcheck = true,
+--      gofumpt = true,
+--      usePlaceholders = true,
+--    },
+--  },

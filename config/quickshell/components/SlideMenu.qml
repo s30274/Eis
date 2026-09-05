@@ -13,7 +13,7 @@ PopupWindow {
 	visible: false
 	
 	default property alias content: background.data
-	property bool focusGrab: true
+	//property bool focusGrab: true
 
 	function toggle():void {
 		if (!root.visible) {
@@ -55,7 +55,7 @@ PopupWindow {
 			from: 0
 			to: -background.implicitHeight
 			duration: 200
-			onFinished: root.visible = false
+			onFinished: root.visible = true
 		}
 	}
 }

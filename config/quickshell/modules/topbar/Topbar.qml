@@ -1,7 +1,6 @@
 import Quickshell
 import Quickshell.Io
 import Quickshell.Widgets
-import Quickshell.Wayland
 import Quickshell.Hyprland
 import Quickshell.Services.UPower
 import Quickshell.Services.Pipewire 
@@ -24,9 +23,10 @@ PanelWindow {
 	property real memTotal: 0
 	property bool audioMuted: Pipewire.defaultAudioSink.audio.muted
 	property real audioVolume: Math.floor(Pipewire.defaultAudioSink.audio.volume * 100)
-	property bool batteryExists: UPower.isLaptopBattery
+	property bool batteryExists: UPower.displayDevice.isLaptopBattery
 	property bool batteryPlugged: !UPower.onBattery
 	property int batteryPercent: Math.floor(UPower.displayDevice.percentage * 100)
+	property bool isLaptopScreen: false
 	property int brightness: 0
 	property int brightnessStep: 5
 	property var lastCpuIdle: 0
@@ -48,12 +48,12 @@ PanelWindow {
 	CustomShortcut {
 		name: "brightnessDown"
 		description: "decrease brightness"
-		onPressed: { if (brightness > 0) decreaseBrightnessProc.running = true }
+		onPressed: { if (root.brightness > 0) decreaseBrightnessProc.running = true }
 	}
 
 	Process {
 		id: increaseBrightnessProc
-		command: ["brightnessctl", "-e3", "-n2", "set", `${brightnessStep}%+`]
+		command: ["brightnessctl", "-e3", "-n2", "set", `${root.brightnessStep}%+`]
 		stdout: StdioCollector {
 			onStreamFinished: brightnessProc.running = true
 		}
@@ -61,7 +61,7 @@ PanelWindow {
 
 	Process {
 		id: decreaseBrightnessProc
-		command: ["brightnessctl", "-e3", "-n2", "set", `${brightnessStep}%-`]
+		command: ["brightnessctl", "-e3", "-n2", "set", `${root.brightnessStep}%-`]
 		stdout: StdioCollector {
 			onStreamFinished: brightnessProc.running = true
 		}
@@ -73,7 +73,18 @@ PanelWindow {
 		command: ["sh", "-c", "brightnessctl", "i"]
 		stdout: StdioCollector {
 			onStreamFinished: {
-				brightness = parseInt(text.match(/[0-9][0-9]+%/))
+				root.brightness = parseInt(text.match(/[0-9][0-9]+%/))
+			}
+		}
+	}
+
+	Process {
+		id: brigthnessControlDetection
+		running: true
+		command: ["sh", "-c", "brightnessctl max"]
+		stdout: StdioCollector {
+			onStreamFinished: {
+				root.isLaptopScreen = parseInt(text) > 1
 			}
 		}
 	}
@@ -132,11 +143,11 @@ PanelWindow {
 				var p = data.trim().split(/\s+/)
 				var idle = parseInt(p[4]) + parseInt(p[5])
 				var total = p.slice(1, 8).reduce((a, b) => a + parseInt(b), 0)
-				if(lastCpuTotal > 0) {
-					cpuUsage = Math.round(100 * (1 - (idle - lastCpuIdle) / (total - lastCpuTotal)))
+				if(root.lastCpuTotal > 0) {
+					root.cpuUsage = Math.round(100 * (1 - (idle - root.lastCpuIdle) / (total - root.lastCpuTotal)))
 				}
-				lastCpuTotal = total
-				lastCpuIdle = idle
+				root.lastCpuTotal = total
+				root.lastCpuIdle = idle
 			}
 		}
 		Component.onCompleted: running = true
@@ -148,8 +159,8 @@ PanelWindow {
 		stdout: SplitParser {
 			onRead: data => {
 				var parts = data.trim().split(/\s+/)
-				memTotal = (parseInt(parts[1]) || 1) / 1000000
-				memUsed = (parseInt(parts[2]) || 0) / 1000000
+				root.memTotal = (parseInt(parts[1]) || 1) / 1000000
+				root.memUsed = (parseInt(parts[2]) || 0) / 1000000
 				//memUsage = Math.round(100 * used / total)
 			}
 		}
@@ -223,6 +234,9 @@ PanelWindow {
 						Repeater {
 							model: Appearance.workspaceAmount
 							Text {
+								id: workspaceDelegate
+
+								required property int index
 								property var ws: Hyprland.workspaces.values.find(w => w.id === index + 1)
 								property bool isActive: Hyprland.focusedWorkspace?.id === (index + 1)
 
@@ -233,7 +247,7 @@ PanelWindow {
 								// Click to switch workspaces
 								MouseArea {
 									anchors.fill: parent
-									onClicked: Hyprland.dispatch(`hl.dsp.focus({ workspace = ${(index + 1)}})`)
+									onClicked: Hyprland.dispatch(`hl.dsp.focus({ workspace = ${(workspaceDelegate.index + 1)}})`)
 								}
 							}
 						}
@@ -262,7 +276,7 @@ PanelWindow {
 				}
 
 				Text {
-					text: "  " + cpuUsage + "%"
+					text: "  " + root.cpuUsage + "%"
 					color: Colors.cyan
 					font { family: Appearance.fontFamily; pixelSize: Appearance.fontSize; bold: true }
 					Layout.leftMargin: (Appearance.fontSize / 6)
@@ -270,7 +284,7 @@ PanelWindow {
 				}
 
 				Text {
-					text: "  " + memUsed.toFixed(1) + "G/" + memTotal.toFixed(1) + "G"
+					text: "  " + root.memUsed.toFixed(1) + "G/" + root.memTotal.toFixed(1) + "G"
 					color: Colors.green
 					font { family: Appearance.fontFamily; pixelSize: Appearance.fontSize; bold: true }
 					Layout.rightMargin: Appearance.fontSize
@@ -331,8 +345,8 @@ PanelWindow {
 				spacing: Appearance.fontSize
 
 				Text {
-					text: (audioMuted ? " " : " ") + (audioVolume < 10 ? " " : "") + audioVolume + "%"
-					color: audioMuted ? Colors.blue : Colors.yellow
+					text: (root.audioMuted ? " " : " ") + (root.audioVolume < 10 ? " " : "") + root.audioVolume + "%"
+					color: root.audioMuted ? Colors.blue : Colors.yellow
 					font { family: Appearance.fontFamily; pixelSize: Appearance.fontSize; bold: true }
 				}
 
@@ -341,13 +355,13 @@ PanelWindow {
 						return (temp < 50 ? " " : (temp > 90 ? " " : " "))
 					}
 
-					text: getTemperatureIcon(0) + cpuTemp + "°"
-					color: cpuTemp < 90 ? Colors.green : Colors.red
+					text: getTemperatureIcon(0) + root.cpuTemp + "°"
+					color: root.cpuTemp < 90 ? Colors.green : Colors.red
 					font { family: Appearance.fontFamily; pixelSize: Appearance.fontSize; bold: true }
 				}
 
 				Text {
-					visible: batteryExists
+					visible: root.batteryExists
 					function getBatteryIcon(percent: int, isPlugged: bool): string {
 						if(isPlugged)
 							return "󰂄 "
@@ -377,13 +391,14 @@ PanelWindow {
 						}
 					}
 
-					text: getBatteryIcon(batteryPercent, batteryPlugged) + batteryPercent + "%"
-					color: batteryPlugged ? Colors.green : (batteryPercent < 20 ? Colors.red : Colors.cyan)
+					text: getBatteryIcon(root.batteryPercent, root.batteryPlugged) + root.batteryPercent + "%"
+					color: root.batteryPlugged ? Colors.green : (root.batteryPercent < 20 ? Colors.red : Colors.cyan)
 					font { family: Appearance.fontFamily; pixelSize: Appearance.fontSize; bold: true }
 				}
 
 				Text {
-					text: (brightness <= 25 ? "󰃞 " : (brightness <= 70 ? "󰃟 " : "󰃠 ")) + brightness + "%"
+					visible: root.isLaptopScreen
+					text: (root.brightness <= 25 ? "󰃞 " : (root.brightness <= 70 ? "󰃟 " : "󰃠 ")) + root.brightness + "%"
 					color: Colors.green
 					font { family: Appearance.fontFamily; pixelSize: Appearance.fontSize; bold: true }
 				}
@@ -417,6 +432,8 @@ PanelWindow {
 						id: tray
 						model: SystemTray.items
 						IconImage {
+							id: trayIcon
+							required property int index
 							implicitSize: Appearance.barHeight * 0.7
 							property SystemTrayItem item: SystemTray.items.values[index]
 							source: item.icon
@@ -424,10 +441,10 @@ PanelWindow {
 								acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
 								anchors.fill: parent
 								onClicked: event => {
-									if (item.hasMenu && event.button === Qt.RightButton)
-										item.display(root, root.width - event.x, Appearance.barHeight + Appearance.topMargin)
+									if (trayIcon.item.hasMenu && event.button === Qt.RightButton)
+										trayIcon.item.display(root, root.width - event.x, Appearance.barHeight + Appearance.topMargin)
 									else {
-										event.button === Qt.LeftButton ? item.activate() : item.secondaryActivate();
+										event.button === Qt.LeftButton ? trayIcon.item.activate() : trayIcon.item.secondaryActivate();
 									}
 								}
 							}

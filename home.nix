@@ -83,6 +83,7 @@ in
 	python3
 	nodejs_26 # ONLY FOR NEOVIM LSP
 	unzip
+	openvpn
 
 	# Utilities
 	brightnessctl
@@ -96,6 +97,7 @@ in
 	localsend
 	collision
 	vlc
+	gimp
 
 	# Funny apps
 	hieroglyphic

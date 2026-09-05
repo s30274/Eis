@@ -1,20 +1,37 @@
 import Quickshell
+import Quickshell.Io
 import Quickshell.Wayland
 import QtQuick
-import QtQuick.Layouts
 
 import qs.config
 
-PanelWindow {
+Variants {
 	id: root
-	anchors { top: true; right: true; bottom: true; left: true }
+	model: Quickshell.screens
 
-    WlrLayershell.layer: WlrLayer.Background
-    WlrLayershell.exclusiveZone: -1 
+	PanelWindow {
+		id: monitor
+		screen: root.modelData
+		anchors { top: true; right: true; bottom: true; left: true }
 
-	Image {
-		anchors.fill: parent
-		source: "/home/piotr/Pictures/Wallpapers/bluegirl.jpg"
-		fillMode: Image.PreserveAspectCrop
+
+		WlrLayershell.layer: WlrLayer.Background
+		WlrLayershell.exclusiveZone: -1 
+
+		IpcHandler {
+			target: "wallpaper"
+			function set(path: string): void { PersistentConfig.wallpaperPath = path; }
+		}
+
+		Image {
+			id: wallpaper
+			anchors.fill: parent
+			sourceSize.width: monitor.screen.width
+			sourceSize.height: monitor.screen.height
+			horizontalAlignment: Image.AlignLeft
+    		verticalAlignment: Image.AlignTop
+			source: PersistentConfig.wallpaperPath
+			fillMode: Image.PreserveAspectCrop
+		}
 	}
 }
