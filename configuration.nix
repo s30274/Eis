@@ -1,5 +1,16 @@
 { config, lib, pkgs, ... }:
 
+let
+  sddm-astronaut = (pkgs.sddm-astronaut.override {
+    embeddedTheme = "astronaut";  # or any other theme
+    themeConfig = {
+      # Customize colors and settings
+      HeaderTextColor = "#d5c4a1";
+      # Background = "Backgrounds/your-custom-background.png";
+      # ... other theme configuration options
+    };
+  });
+in
 {
   imports =
     [
@@ -10,6 +21,13 @@
   boot.loader.limine.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
+  zramSwap = {
+    enable = true;
+	priority = 100;
+	algorithm = "zstd";
+	memoryPercent = 50;
+  };
+
   networking.hostName = "eis-btw";
   networking.networkmanager.enable = true;
 
@@ -17,11 +35,21 @@
   networking.firewall.allowedTCPPorts = [ 53317 ];
   networking.firewall.allowedUDPPorts = [ 53317 ];
 
+  # GTA V Battleye
+  networking.extraHosts = "
+    0.0.0.0 paradise-s1.battleye.com
+    0.0.0.0 test-s1.battleye.com
+    0.0.0.0 paradiseenhanced-s1.battleye.com
+  ";
+  # Start arguments:
+  # gamemoderun PROTON_BATTLEYE_RUNTIME="~/.local/share/Steam/steamapps/common/Proton BattlEye Runtime" %command%
+
   time.timeZone = "Europe/Warsaw";
 
   services.libinput.enable = true;
 
   services.desktopManager.plasma6.enable = true;
+
 
   programs.hyprland = {
     enable = true;
@@ -32,6 +60,11 @@
 
   programs.steam.enable = true;
   programs.gamemode.enable = true;
+
+  services.ollama = {
+    enable = true;
+    loadModels = [ "ornith-1.5:9b" "deepseek-r1:8b"];
+  };
 
   users.users.piotr = {
     isNormalUser = true;
@@ -61,6 +94,7 @@
     hyprpolkitagent
     ntfs3g
     librewolf
+	sddm-astronaut
   ];
 
   # qmlls lsp
@@ -122,37 +156,14 @@
   };
 
   # ==============< SDDM >=================
-
-  let
-    sddm-astronaut = (pkgs.sddm-astronaut.override {
-      embeddedTheme = "japanese_aesthetic";  # or any other theme
-      themeConfig = {
-        # Customize colors and settings
-        HeaderTextColor = "#d5c4a1";
-        Background = "Backgrounds/your-custom-background.png";
-        # ... other theme configuration options
-      };
-    }).overrideAttrs (oldAttrs: {
-      # Optional: Inject custom background image
-      installPhase = oldAttrs.installPhase + ''
-        chmod u+w $out/share/sddm/themes/sddm-astronaut-theme/Backgrounds/
-        cp ${./relative/path/to/your-custom-background.png} \
-          $out/share/sddm/themes/sddm-astronaut-theme/Backgrounds/your-custom-background.png
-      '';
-    });
-  in
-  {
-    environment.systemPackages = [ sddm-astronaut ];
   
-    services.displayManager.sddm = {
-      enable = true;
-      wayland.enable = true;
-      package = pkgs.kdePackages.sddm;
-      extraPackages = with pkgs; [
-        kdePackages.qtmultimedia # Required for video backgrounds/audio
-      ];
-      theme = "sddm-astronaut-theme";
-    };
-  }
+  services.displayManager.sddm = {
+    enable = true;
+	wayland.enable = true;
+    extraPackages = with pkgs; [
+      kdePackages.qtmultimedia # Required for video backgrounds/audio
+    ];
+    theme = "sddm-astronaut-theme";
+  };
 }
 

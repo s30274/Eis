@@ -88,8 +88,10 @@ PanelWindow {
 				to: 0
 				duration: 200
 				onStarted: {
+					selectionRect.hide()	
 					previewRow.selectedPreview = previewRow.ring(previewRow.selectedPreview - 1);
 				}
+				onFinished: selectionRect.show()
 			}
 			NumberAnimation on x {
 				id: closeAnim
@@ -97,9 +99,11 @@ PanelWindow {
 				from: 0
 				to: -320 - 20
 				duration: 200
+				onStarted: selectionRect.hide()
 				onFinished: {
 					previewRow.selectedPreview = previewRow.ring(previewRow.selectedPreview + 1);
 					carousel.x = 0
+					selectionRect.show()
 				}
 			}
 
@@ -140,23 +144,46 @@ PanelWindow {
 					id: preiview1
 					Layout.alignment: Qt.AlignVCenter
 					fileName: previewRow.getPreview(-1)
+					MouseArea {
+						anchors.fill: parent
+						onClicked: previewRow.previous()
+					}
 				}
 				Rectangle {
+					id: selectionRect
 					Layout.alignment: Qt.AlignVCenter
 					width: 320 + 6
 					height: 180 + 6
 					radius: 17
-					color: Colors.muted
+					color: Colors.blue
+
+					function hide(): void { color = Colors.transparent }
+					function show(): void { showAnimation.start(); }
+
+					ColorAnimation on color {
+						id: showAnimation
+						to: Colors.blue	
+						duration: 200
+					}
 
 					Preview {
 						id: middleSelection
 						anchors.centerIn: parent
 						fileName: previewRow.getPreview(0)
 					}
+
+					MouseArea {
+						anchors.fill: parent
+						onClicked: PersistentConfig.wallpaperPath = previewRow.getPreview(0)
+					}
 				}
 				Preview {
 					Layout.alignment: Qt.AlignVCenter
 					fileName: previewRow.getPreview(1)
+					MouseArea {
+						anchors.fill: parent
+						onClicked: previewRow.next()
+					}
 				}
 				Preview {
 					Layout.alignment: Qt.AlignVCenter

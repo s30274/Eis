@@ -84,6 +84,9 @@ in
 	nodejs_26 # ONLY FOR NEOVIM LSP
 	unzip
 	openvpn
+	grim
+	libnotify
+	wl-clipboard
 
 	# Utilities
 	brightnessctl

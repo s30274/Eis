@@ -72,6 +72,7 @@ hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen("maximized", "toggle"))
 hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mainMod .. " + N", hl.dsp.exec_cmd("qs ipc call notifications toggle"))
 hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("qs ipc call wallpaperBrowser toggle"))
+hl.bind("Print", hl.dsp.exec_cmd("qs ipc call screenshot toggle"))
 
 -- move focus/windows
 hl.bind(mainMod .. " + left", hl.dsp.focus({ direction = "left"}) )
