@@ -1,4 +1,6 @@
 
 //@theme "/usr/share/rofi/themes/material.rasi"
 
-@theme "/etc/profiles/per-user/piotr/share/rofi/themes/material.rasi"
+//@theme "/etc/profiles/per-user/piotr/share/rofi/themes/material.rasi"
+
+@theme "/nix/store/yb2z62w6i6rsvn3anzxl1rlhaq026ayr-rofi-2.0.0/share/rofi/themes/material.rasi"

@@ -12,233 +12,237 @@ import qs.config
 import qs.components.misc
 import qs.modules.wifimenu
 
-PanelWindow {
+Variants {
 	id: root
+	model: Quickshell.screens
 
-	// System data
-	property int cpuTemp: 0
-	property int gpuTemp: 0
-	property int cpuUsage: 0
-	property real memUsed: 0
-	property real memTotal: 0
-	property bool audioMuted: Pipewire.defaultAudioSink.audio.muted
-	property real audioVolume: Math.floor(Pipewire.defaultAudioSink.audio.volume * 100)
-	property bool batteryExists: UPower.displayDevice.isLaptopBattery
-	property bool batteryPlugged: !UPower.onBattery
-	property int batteryPercent: Math.floor(UPower.displayDevice.percentage * 100)
-	property bool isLaptopScreen: false
-	property int brightness: 0
-	property int brightnessStep: 5
-	property var lastCpuIdle: 0
-	property var lastCpuTotal: 0
+	PanelWindow {
+		id: monitor
+		screen: modelData
 
-	// Pipewire (audio) stuff
-	PwObjectTracker {
-		objects: [Pipewire.defaultAudioSink]
-	}
+		// System data
+		property int cpuTemp: 0
+		property int gpuTemp: 0
+		property int cpuUsage: 0
+		property real memUsed: 0
+		property real memTotal: 0
+		property bool audioMuted: Pipewire.defaultAudioSink.audio.muted
+		property real audioVolume: Math.floor(Pipewire.defaultAudioSink.audio.volume * 100)
+		property bool batteryExists: UPower.displayDevice.isLaptopBattery
+		property bool batteryPlugged: !UPower.onBattery
+		property int batteryPercent: Math.floor(UPower.displayDevice.percentage * 100)
+		property bool isLaptopScreen: false
+		property int brightness: 0
+		property int brightnessStep: 5
+		property var lastCpuIdle: 0
+		property var lastCpuTotal: 0
+		property var modelData
 
-	// Brightness stuff
-	
-	CustomShortcut {
-		name: "brightnessUp"
-		description: "increase brightness"
-		onPressed: increaseBrightnessProc.running = true
-	}
-
-	CustomShortcut {
-		name: "brightnessDown"
-		description: "decrease brightness"
-		onPressed: { if (root.brightness > 0) decreaseBrightnessProc.running = true }
-	}
-
-	Process {
-		id: increaseBrightnessProc
-		command: ["brightnessctl", "-e3", "-n2", "set", `${root.brightnessStep}%+`]
-		stdout: StdioCollector {
-			onStreamFinished: brightnessProc.running = true
+		// Pipewire (audio) stuff
+		PwObjectTracker {
+			objects: [Pipewire.defaultAudioSink]
 		}
-	}
 
-	Process {
-		id: decreaseBrightnessProc
-		command: ["brightnessctl", "-e3", "-n2", "set", `${root.brightnessStep}%-`]
-		stdout: StdioCollector {
-			onStreamFinished: brightnessProc.running = true
+		// Brightness stuff
+		
+		CustomShortcut {
+			name: "brightnessUp"
+			description: "increase brightness"
+			onPressed: increaseBrightnessProc.running = true
 		}
-	}
 
-	Process {
-		id: brightnessProc
-		running: true
-		command: ["sh", "-c", "brightnessctl", "i"]
-		stdout: StdioCollector {
-			onStreamFinished: {
-				root.brightness = parseInt(text.match(/[0-9][0-9]+%/))
+		CustomShortcut {
+			name: "brightnessDown"
+			description: "decrease brightness"
+			onPressed: { if (monitor.brightness > 0) decreaseBrightnessProc.running = true }
+		}
+
+		Process {
+			id: increaseBrightnessProc
+			command: ["brightnessctl", "-e3", "-n2", "set", `${monitor.brightnessStep}%+`]
+			stdout: StdioCollector {
+				onStreamFinished: brightnessProc.running = true
 			}
 		}
-	}
 
-	Process {
-		id: brigthnessControlDetection
-		running: true
-		command: ["sh", "-c", "brightnessctl max"]
-		stdout: StdioCollector {
-			onStreamFinished: {
-				root.isLaptopScreen = parseInt(text) > 1
+		Process {
+			id: decreaseBrightnessProc
+			command: ["brightnessctl", "-e3", "-n2", "set", `${monitor.brightnessStep}%-`]
+			stdout: StdioCollector {
+				onStreamFinished: brightnessProc.running = true
 			}
 		}
-	}
 
-	// Processes
-
-	Process {
-		id: tempProc
-		command: ["sh", "-c", "sensors"]
-		stdout: StdioCollector {
-            onStreamFinished: {
-                let cpuTemp = text.match(/(?:Package id [0-9]+|Tdie):\s+((\+|-)[0-9.]+)(°| )C/);
-                if (!cpuTemp)
-                    // If AMD Tdie pattern failed, try fallback on Tctl
-                    cpuTemp = text.match(/Tctl:\s+((\+|-)[0-9.]+)(°| )C/);
-
-                if (cpuTemp)
-                    root.cpuTemp = parseFloat(cpuTemp[1]);
-
-                if (root.gpuType !== "GENERIC")
-                    return;
-
-                let eligible = false;
-                let sum = 0;
-                let count = 0;
-
-                for (const line of text.trim().split("\n")) {
-                    if (line === "Adapter: PCI adapter")
-                        eligible = true;
-                    else if (line === "")
-                        eligible = false;
-                    else if (eligible) {
-                        let match = line.match(/^(temp[0-9]+|GPU core|edge)+:\s+\+([0-9]+\.[0-9]+)(°| )C/);
-                        if (!match)
-                            // Fall back to junction/mem if GPU doesn't have edge temp (for AMD GPUs)
-                            match = line.match(/^(junction|mem)+:\s+\+([0-9]+\.[0-9]+)(°| )C/);
-
-                        if (match) {
-                            sum += parseFloat(match[2]);
-                            count++;
-                        }
-                    }
-                }
-
-                root.gpuTemp = count > 0 ? sum / count : 0;
-            }
-        }
-	}
-
-	Process {
-		id: cpuProc
-		command: ["sh", "-c", "head -1 /proc/stat"]
-
-		stdout: SplitParser {
-			onRead: data => {
-				var p = data.trim().split(/\s+/)
-				var idle = parseInt(p[4]) + parseInt(p[5])
-				var total = p.slice(1, 8).reduce((a, b) => a + parseInt(b), 0)
-				if(root.lastCpuTotal > 0) {
-					root.cpuUsage = Math.round(100 * (1 - (idle - root.lastCpuIdle) / (total - root.lastCpuTotal)))
+		Process {
+			id: brightnessProc
+			running: true
+			command: ["sh", "-c", "brightnessctl", "i"]
+			stdout: StdioCollector {
+				onStreamFinished: {
+					monitor.brightness = parseInt(text.match(/[0-9][0-9]+%/))
 				}
-				root.lastCpuTotal = total
-				root.lastCpuIdle = idle
 			}
 		}
-		Component.onCompleted: running = true
-	}
 
-	Process {
-		id: memProc
-		command: ["sh", "-c", "free | grep Mem"]
-		stdout: SplitParser {
-			onRead: data => {
-				var parts = data.trim().split(/\s+/)
-				root.memTotal = (parseInt(parts[1]) || 1) / 1000000
-				root.memUsed = (parseInt(parts[2]) || 0) / 1000000
-				//memUsage = Math.round(100 * used / total)
+		Process {
+			id: brigthnessControlDetection
+			running: true
+			command: ["sh", "-c", "brightnessctl max"]
+			stdout: StdioCollector {
+				onStreamFinished: {
+					monitor.isLaptopScreen = parseInt(text) > 1
+				}
 			}
 		}
-		Component.onCompleted: running = true
-	}
 
-	Process {
-		id: logout
-		command: ["sh", "-c", "wlogout"]
-	}
+		// Processes
 
-	// Timer
-	Timer {
-		interval: 2000
-		running: true
-		repeat: true
-		onTriggered: {
-			tempProc.running = true
-			cpuProc.running = true
-			memProc.running = true
+		Process {
+			id: tempProc
+			command: ["sh", "-c", "sensors"]
+			stdout: StdioCollector {
+				onStreamFinished: {
+					let cpuTemp = text.match(/(?:Package id [0-9]+|Tdie):\s+((\+|-)[0-9.]+)(°| )C/);
+					if (!cpuTemp)
+						// If AMD Tdie pattern failed, try fallback on Tctl
+						cpuTemp = text.match(/Tctl:\s+((\+|-)[0-9.]+)(°| )C/);
+
+					if (cpuTemp)
+						monitor.cpuTemp = parseFloat(cpuTemp[1]);
+
+					if (monitor.gpuType !== "GENERIC")
+						return;
+
+					let eligible = false;
+					let sum = 0;
+					let count = 0;
+
+					for (const line of text.trim().split("\n")) {
+						if (line === "Adapter: PCI adapter")
+							eligible = true;
+						else if (line === "")
+							eligible = false;
+						else if (eligible) {
+							let match = line.match(/^(temp[0-9]+|GPU core|edge)+:\s+\+([0-9]+\.[0-9]+)(°| )C/);
+							if (!match)
+								// Fall back to junction/mem if GPU doesn't have edge temp (for AMD GPUs)
+								match = line.match(/^(junction|mem)+:\s+\+([0-9]+\.[0-9]+)(°| )C/);
+
+							if (match) {
+								sum += parseFloat(match[2]);
+								count++;
+							}
+						}
+					}
+
+					monitor.gpuTemp = count > 0 ? sum / count : 0;
+				}
+			}
 		}
-	}
 
-	// ---=== MAIN ===---
-	
-  	anchors {
-    	top: true
-    	left: true
-    	right: true
-  	}
-	color: Colors.transparent
-  	implicitHeight: Appearance.barHeight + Appearance.topMargin
+		Process {
+			id: cpuProc
+			command: ["sh", "-c", "head -1 /proc/stat"]
 
-	mask: Region { Region { item: leftIsland } Region { item: tasks } }
+			stdout: SplitParser {
+				onRead: data => {
+					var p = data.trim().split(/\s+/)
+					var idle = parseInt(p[4]) + parseInt(p[5])
+					var total = p.slice(1, 8).reduce((a, b) => a + parseInt(b), 0)
+					if(monitor.lastCpuTotal > 0) {
+						monitor.cpuUsage = Math.round(100 * (1 - (idle - monitor.lastCpuIdle) / (total - monitor.lastCpuTotal)))
+					}
+					monitor.lastCpuTotal = total
+					monitor.lastCpuIdle = idle
+				}
+			}
+			Component.onCompleted: running = true
+		}
 
-	RowLayout {
-		anchors.fill: parent
-		anchors.topMargin: Appearance.topMargin
-		anchors.leftMargin: Appearance.sideMargin
-		anchors.rightMargin: Appearance.sideMargin
+		Process {
+			id: memProc
+			command: ["sh", "-c", "free | grep Mem"]
+			stdout: SplitParser {
+				onRead: data => {
+					var parts = data.trim().split(/\s+/)
+					monitor.memTotal = (parseInt(parts[1]) || 1) / 1000000
+					monitor.memUsed = (parseInt(parts[2]) || 0) / 1000000
+					//memUsage = Math.round(100 * used / total)
+				}
+			}
+			Component.onCompleted: running = true
+		}
 
-		Rectangle {
-			id: leftIsland
-			color: Colors.bg
-			antialiasing: true
-			radius: Appearance.barHeight
-			Layout.preferredWidth: leftIslandContent.width
-			Layout.preferredHeight: Appearance.barHeight
-			Layout.alignment: Qt.AlignLeft
+		Process {
+			id: logout
+			command: ["sh", "-c", "wlogout"]
+		}
 
-			RowLayout {
-				id: leftIslandContent
-				anchors.horizontalCenter: parent.horizontalCenter
-				anchors.verticalCenter: parent.verticalCenter
-				spacing: (Appearance.fontSize / 2)
+		// Timer
+		Timer {
+			interval: 2000
+			running: true
+			repeat: true
+			onTriggered: {
+				tempProc.running = true
+				cpuProc.running = true
+				memProc.running = true
+			}
+		}
 
-				Rectangle {
-					color: Colors.black
-					antialiasing: true
-					radius: Appearance.barHeight
-					Layout.preferredWidth: workspaces.width + Appearance.fontSize
-					Layout.preferredHeight: Appearance.barHeight
+		// ---=== MAIN ===---
+		
+		anchors {
+			top: true
+			left: true
+			right: true
+		}
+		color: Colors.transparent
+		implicitHeight: Appearance.barHeight + Appearance.topMargin
 
-					RowLayout {
-						id: workspaces
-						anchors.verticalCenter: parent.verticalCenter
-						anchors.horizontalCenter: parent.horizontalCenter
-						uniformCellSizes: true
-						spacing: Appearance.fontSize / 2
+		mask: Region { Region { item: leftIsland } Region { item: tasks } }
 
-						Repeater {
-							model: Appearance.workspaceAmount
-							Text {
-								id: workspaceDelegate
+		RowLayout {
+			anchors.fill: parent
+			anchors.topMargin: Appearance.topMargin
+			anchors.leftMargin: Appearance.sideMargin
+			anchors.rightMargin: Appearance.sideMargin
 
+			Rectangle {
+				id: leftIsland
+				color: Colors.bg
+				antialiasing: true
+				radius: Appearance.barHeight
+				Layout.preferredWidth: leftIslandContent.width
+				Layout.preferredHeight: Appearance.barHeight
+				Layout.alignment: Qt.AlignLeft
+
+				RowLayout {
+					id: leftIslandContent
+					anchors.horizontalCenter: parent.horizontalCenter
+					anchors.verticalCenter: parent.verticalCenter
+					spacing: (Appearance.fontSize / 2)
+
+					Rectangle {
+						color: Colors.black
+						antialiasing: true
+						radius: Appearance.barHeight
+						Layout.preferredWidth: workspaces.width + Appearance.fontSize
+						Layout.preferredHeight: Appearance.barHeight
+
+						RowLayout {
+							id: workspaces
+							anchors.verticalCenter: parent.verticalCenter
+							anchors.horizontalCenter: parent.horizontalCenter
+							uniformCellSizes: true
+							spacing: Appearance.fontSize / 2
+
+							Repeater {
+								model: Appearance.workspaceAmount
+								Text {
 								required property int index
-								property var ws: Hyprland.workspaces.values.find(w => w.id === index + 1)
-								property bool isActive: Hyprland.focusedWorkspace?.id === (index + 1)
+								property var ws: Hyprland.workspaces.values.find(w => w.id === index * 2 + 2) || Hyprland.workspaces.values.find(w => w.id === index * 2 + 1)
+								property bool isActive: Hyprland.focusedWorkspace?.id === (index * 2 + 2) || Hyprland.focusedWorkspace?.id === (index * 2 + 1)
 
 								text: isActive ? "" : (ws ? "" : "")
 								color: ws ? Colors.cyan : Colors.muted
@@ -247,218 +251,219 @@ PanelWindow {
 								// Click to switch workspaces
 								MouseArea {
 									anchors.fill: parent
-									onClicked: Hyprland.dispatch(`hl.dsp.focus({ workspace = ${(workspaceDelegate.index + 1)}})`)
+									onClicked: Hyprland.dispatch("workspace " + (parent.index + 1))
+								}
+							}
+							}
+						}
+					}
+
+					Rectangle {
+						id: profileIndicator
+						width: Appearance.fontSize
+						Layout.alignment: Qt.AlignVCenter
+						readonly property int profile: PowerProfiles.profile
+						readonly property int highestProfile: PowerProfiles.hasPerformanceProfile ? 3 : 2
+
+						Text {
+							anchors.verticalCenter: parent.verticalCenter
+							text: profileIndicator.profile == 0 ? "󱙷" : (profileIndicator.profile == 1 ? "󰤇" : "")
+							color: profileIndicator.profile == 0 ? Colors.green : (profileIndicator.profile == 1 ? Colors.cyan : Colors.red)
+							font { family: Appearance.fontFamily; pixelSize: Appearance.fontSize; bold: true }
+							MouseArea {
+								anchors.fill: parent
+								onClicked: {
+									PowerProfiles.profile = (profileIndicator.profile + 1) % profileIndicator.highestProfile
 								}
 							}
 						}
 					}
-				}
-
-				Rectangle {
-					id: profileIndicator
-					width: Appearance.fontSize
-					Layout.alignment: Qt.AlignVCenter
-					readonly property int profile: PowerProfiles.profile
-					readonly property int highestProfile: PowerProfiles.hasPerformanceProfile ? 3 : 2
 
 					Text {
-						anchors.verticalCenter: parent.verticalCenter
-						text: profileIndicator.profile == 0 ? "󱙷" : (profileIndicator.profile == 1 ? "󰤇" : "")
-						color: profileIndicator.profile == 0 ? Colors.green : (profileIndicator.profile == 1 ? Colors.cyan : Colors.red)
+						text: "  " + monitor.cpuUsage + "%"
+						color: Colors.cyan
 						font { family: Appearance.fontFamily; pixelSize: Appearance.fontSize; bold: true }
+						Layout.leftMargin: (Appearance.fontSize / 6)
+						Layout.rightMargin: (Appearance.fontSize / 2)
+					}
+
+					Text {
+						text: "  " + monitor.memUsed.toFixed(1) + "G/" + monitor.memTotal.toFixed(1) + "G"
+						color: Colors.green
+						font { family: Appearance.fontFamily; pixelSize: Appearance.fontSize; bold: true }
+						Layout.rightMargin: Appearance.fontSize
+					}
+				}
+			}
+
+			// This is dumb part 1
+			Item {
+				property int difference: rightIsland.width - leftIsland.width
+				Layout.preferredWidth: difference > 0 ? difference : 0
+			}
+
+			Rectangle {
+				id: centerIsland
+				color: Colors.bg
+				antialiasing: true
+				radius: Appearance.barHeight
+				Layout.preferredWidth: clock.width + (2 * Appearance.fontSize)
+				Layout.preferredHeight: Appearance.barHeight
+				Layout.alignment: Qt.AlignHCenter
+
+				Text {
+					id: clock
+					anchors.horizontalCenter: parent.horizontalCenter
+					anchors.verticalCenter: parent.verticalCenter
+					text: Qt.formatDateTime(new Date(), "ddd, MMM dd - HH:mm")
+					color: Colors.blue
+					font { family: Appearance.fontFamily; pixelSize: Appearance.fontSize; bold: true }
+					Timer {
+						interval: 1000
+						running: true
+						repeat: true
+						onTriggered: clock.text = Qt.formatDateTime(new Date(), "ddd, MMM dd - HH:mm")
+					}
+				}
+			}
+
+			// This is dumb part 2
+			Item {
+				property int difference: leftIsland.width - rightIsland.width
+				Layout.preferredWidth: difference > 0 ? difference : 0
+			}
+
+			Rectangle {
+				id: rightIsland
+				color: Colors.bg
+				antialiasing: true
+				radius: Appearance.barHeight
+				Layout.preferredWidth: tasks.width + (2 * Appearance.fontSize)
+				Layout.preferredHeight: Appearance.barHeight
+				Layout.alignment: Qt.AlignRight
+
+				RowLayout {
+					id: tasks
+					anchors.horizontalCenter: parent.horizontalCenter
+					anchors.verticalCenter: parent.verticalCenter
+					spacing: Appearance.fontSize
+
+					Text {
+						text: (monitor.audioMuted ? " " : " ") + (monitor.audioVolume < 10 ? " " : "") + monitor.audioVolume + "%"
+						color: monitor.audioMuted ? Colors.blue : Colors.yellow
+						font { family: Appearance.fontFamily; pixelSize: Appearance.fontSize; bold: true }
+					}
+
+					Text {
+						function getTemperatureIcon(temp: int): string {
+							return (temp < 50 ? " " : (temp > 90 ? " " : " "))
+						}
+
+						text: getTemperatureIcon(0) + monitor.cpuTemp + "°"
+						color: monitor.cpuTemp < 90 ? Colors.green : Colors.red
+						font { family: Appearance.fontFamily; pixelSize: Appearance.fontSize; bold: true }
+					}
+
+					Text {
+						visible: monitor.batteryExists
+						function getBatteryIcon(percent: int, isPlugged: bool): string {
+							if(isPlugged)
+								return "󰂄 "
+							if(percent > 97)
+								return "󰁹 "
+							switch(Math.floor(percent/10)) {
+								case 0:
+									return "󰂃 "
+								case 1:
+									return "󰂃 "
+								case 2:
+									return "󰁻 "
+								case 3:
+									return "󰁼 "
+								case 4:
+									return "󰁽 "
+								case 5:
+									return "󰁾 "
+								case 6:
+									return "󰁿 "
+								case 7:
+									return "󰂀 "
+								case 8:
+									return "󰂁 "
+								case 9:
+									return "󰂂 "
+							}
+						}
+
+						text: getBatteryIcon(monitor.batteryPercent, monitor.batteryPlugged) + monitor.batteryPercent + "%"
+						color: monitor.batteryPlugged ? Colors.green : (monitor.batteryPercent < 20 ? Colors.red : Colors.cyan)
+						font { family: Appearance.fontFamily; pixelSize: Appearance.fontSize; bold: true }
+					}
+
+					Text {
+						visible: monitor.isLaptopScreen
+						text: (monitor.brightness <= 25 ? "󰃞 " : (monitor.brightness <= 70 ? "󰃟 " : "󰃠 ")) + monitor.brightness + "%"
+						color: Colors.green
+						font { family: Appearance.fontFamily; pixelSize: Appearance.fontSize; bold: true }
+					}
+
+					Rectangle {
+						id: wifiIcon
+						width: Appearance.fontSize
+						height: Appearance.fontSize
+						color: Colors.white
+						WifiMenu {
+							id: wifiMenu
+							anchor.window: monitor
+							anchor.rect.y: monitor.height
+						}
 						MouseArea {
 							anchors.fill: parent
 							onClicked: {
-								PowerProfiles.profile = (profileIndicator.profile + 1) % profileIndicator.highestProfile
+								if (!wifiMenu.visible) {
+									wifiMenu.anchor.rect.x = wifiIcon.mapToGlobal((wifiIcon.width / 2) - (wifiMenu.width / 2), 0).x
+									wifiMenu.toggle()
+								} else {
+									wifiMenu.toggle()
+								}
 							}
 						}
 					}
-				}
-
-				Text {
-					text: "  " + root.cpuUsage + "%"
-					color: Colors.cyan
-					font { family: Appearance.fontFamily; pixelSize: Appearance.fontSize; bold: true }
-					Layout.leftMargin: (Appearance.fontSize / 6)
-					Layout.rightMargin: (Appearance.fontSize / 2)
-				}
-
-				Text {
-					text: "  " + root.memUsed.toFixed(1) + "G/" + root.memTotal.toFixed(1) + "G"
-					color: Colors.green
-					font { family: Appearance.fontFamily; pixelSize: Appearance.fontSize; bold: true }
-					Layout.rightMargin: Appearance.fontSize
-				}
-			}
-		}
-
-		// This is dumb part 1
-		Item {
-			property int difference: rightIsland.width - leftIsland.width
-			Layout.preferredWidth: difference > 0 ? difference : 0
-		}
-
-		Rectangle {
-			id: centerIsland
-			color: Colors.bg
-			antialiasing: true
-			radius: Appearance.barHeight
-			Layout.preferredWidth: clock.width + (2 * Appearance.fontSize)
-			Layout.preferredHeight: Appearance.barHeight
-			Layout.alignment: Qt.AlignHCenter
-
-			Text {
-				id: clock
-				anchors.horizontalCenter: parent.horizontalCenter
-				anchors.verticalCenter: parent.verticalCenter
-				text: Qt.formatDateTime(new Date(), "ddd, MMM dd - HH:mm")
-				color: Colors.blue
-				font { family: Appearance.fontFamily; pixelSize: Appearance.fontSize; bold: true }
-				Timer {
-					interval: 1000
-					running: true
-					repeat: true
-					onTriggered: clock.text = Qt.formatDateTime(new Date(), "ddd, MMM dd - HH:mm")
-				}
-			}
-		}
-
-		// This is dumb part 2
-		Item {
-			property int difference: leftIsland.width - rightIsland.width
-			Layout.preferredWidth: difference > 0 ? difference : 0
-		}
-
-		Rectangle {
-			id: rightIsland
-			color: Colors.bg
-			antialiasing: true
-			radius: Appearance.barHeight
-			Layout.preferredWidth: tasks.width + (2 * Appearance.fontSize)
-			Layout.preferredHeight: Appearance.barHeight
-			Layout.alignment: Qt.AlignRight
-
-			RowLayout {
-				id: tasks
-				anchors.horizontalCenter: parent.horizontalCenter
-				anchors.verticalCenter: parent.verticalCenter
-				spacing: Appearance.fontSize
-
-				Text {
-					text: (root.audioMuted ? " " : " ") + (root.audioVolume < 10 ? " " : "") + root.audioVolume + "%"
-					color: root.audioMuted ? Colors.blue : Colors.yellow
-					font { family: Appearance.fontFamily; pixelSize: Appearance.fontSize; bold: true }
-				}
-
-				Text {
-					function getTemperatureIcon(temp: int): string {
-						return (temp < 50 ? " " : (temp > 90 ? " " : " "))
-					}
-
-					text: getTemperatureIcon(0) + root.cpuTemp + "°"
-					color: root.cpuTemp < 90 ? Colors.green : Colors.red
-					font { family: Appearance.fontFamily; pixelSize: Appearance.fontSize; bold: true }
-				}
-
-				Text {
-					visible: root.batteryExists
-					function getBatteryIcon(percent: int, isPlugged: bool): string {
-						if(isPlugged)
-							return "󰂄 "
-						if(percent > 97)
-							return "󰁹 "
-						switch(Math.floor(percent/10)) {
-							case 0:
-								return "󰂃 "
-							case 1:
-								return "󰂃 "
-							case 2:
-								return "󰁻 "
-							case 3:
-								return "󰁼 "
-							case 4:
-								return "󰁽 "
-							case 5:
-								return "󰁾 "
-							case 6:
-								return "󰁿 "
-							case 7:
-								return "󰂀 "
-							case 8:
-								return "󰂁 "
-							case 9:
-								return "󰂂 "
-						}
-					}
-
-					text: getBatteryIcon(root.batteryPercent, root.batteryPlugged) + root.batteryPercent + "%"
-					color: root.batteryPlugged ? Colors.green : (root.batteryPercent < 20 ? Colors.red : Colors.cyan)
-					font { family: Appearance.fontFamily; pixelSize: Appearance.fontSize; bold: true }
-				}
-
-				Text {
-					visible: root.isLaptopScreen
-					text: (root.brightness <= 25 ? "󰃞 " : (root.brightness <= 70 ? "󰃟 " : "󰃠 ")) + root.brightness + "%"
-					color: Colors.green
-					font { family: Appearance.fontFamily; pixelSize: Appearance.fontSize; bold: true }
-				}
-
-				Rectangle {
-					id: wifiIcon
-					width: Appearance.fontSize
-					height: Appearance.fontSize
-					color: Colors.white
-					WifiMenu {
-						id: wifiMenu
-						anchor.window: root
-						anchor.rect.y: root.height
-					}
-					MouseArea {
-						anchors.fill: parent
-						onClicked: {
-							if (!wifiMenu.visible) {
-								wifiMenu.anchor.rect.x = wifiIcon.mapToGlobal((wifiIcon.width / 2) - (wifiMenu.width / 2), 0).x
-								wifiMenu.toggle()
-							} else {
-								wifiMenu.toggle()
-							}
-						}
-					}
-				}
-				
-				RowLayout {
-					spacing: Appearance.fontSize / 2
-					Repeater { 
-						id: tray
-						model: SystemTray.items
-						IconImage {
-							id: trayIcon
-							required property int index
-							implicitSize: Appearance.barHeight * 0.7
-							property SystemTrayItem item: SystemTray.items.values[index]
-							source: item.icon
-							MouseArea {
-								acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-								anchors.fill: parent
-								onClicked: event => {
-									if (trayIcon.item.hasMenu && event.button === Qt.RightButton)
-										trayIcon.item.display(root, root.width - event.x, Appearance.barHeight + Appearance.topMargin)
-									else {
-										event.button === Qt.LeftButton ? trayIcon.item.activate() : trayIcon.item.secondaryActivate();
+					
+					RowLayout {
+						spacing: Appearance.fontSize / 2
+						Repeater { 
+							id: tray
+							model: SystemTray.items
+							IconImage {
+								id: trayIcon
+								required property int index
+								implicitSize: Appearance.barHeight * 0.7
+								property SystemTrayItem item: SystemTray.items.values[index]
+								source: item.icon
+								MouseArea {
+									acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+									anchors.fill: parent
+									onClicked: event => {
+										if (trayIcon.item.hasMenu && event.button === Qt.RightButton)
+											trayIcon.item.display(monitor, monitor.width - event.x, Appearance.barHeight + Appearance.topMargin)
+										else {
+											event.button === Qt.LeftButton ? trayIcon.item.activate() : trayIcon.item.secondaryActivate();
+										}
 									}
 								}
 							}
 						}
 					}
-				}
 
-				Text {
-					text: ""
-					color: Colors.blue
-					font { family: Appearance.fontFamily; pixelSize: Appearance.fontSize; bold: true }
-					MouseArea {
-						anchors.fill: parent
-						onClicked: logout.running = true
+					Text {
+						text: ""
+						color: Colors.blue
+						font { family: Appearance.fontFamily; pixelSize: Appearance.fontSize; bold: true }
+						MouseArea {
+							anchors.fill: parent
+							onClicked: logout.running = true
+						}
 					}
 				}
 			}

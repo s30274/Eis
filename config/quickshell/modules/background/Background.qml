@@ -13,9 +13,11 @@ Variants {
 
 	PanelWindow {
 		id: monitor
-		screen: root.modelData
+		screen: modelData
 		anchors { top: true; right: true; bottom: true; left: true }
+		color: Colors.transparent
 
+		property var modelData
 
 		WlrLayershell.layer: WlrLayer.Background
 		WlrLayershell.exclusiveZone: -1 

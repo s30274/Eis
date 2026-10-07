@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, pkgs, spicetify-nix, figma-linux-next, ... }:
 
 let
   dotfiles = "${config.home.homeDirectory}/nixos-dotfiles/config";
@@ -10,6 +10,11 @@ let
     rofi = "rofi";
     kitty = "kitty";
     quickshell = "quickshell";
+  };
+
+  catppuccin-kvantum = pkgs.catppuccin-kvantum.override {
+    accent = "blue";
+    variant = "macchiato";
   };
 in
 {
@@ -67,13 +72,23 @@ in
     '';
   };
 
+  services.udiskie = {
+    enable = true;
+    settings = {
+        program_options = {
+        file_manager = "${pkgs.kdePackages.dolphin}/bin/dolphin";
+      };
+    };
+  };
+
+
   programs.starship = {
     enable = true;
 	enableZshIntegration = true;
-
 	settings = pkgs.lib.importTOML ./config/starship.toml;
   };
 
+  # Packages
   home.packages = with pkgs; [
   	# Productivity
     neovim
@@ -87,20 +102,26 @@ in
 	grim
 	libnotify
 	wl-clipboard
+	jetbrains.clion
+	virtualbox
 
 	# Utilities
 	brightnessctl
 	lm_sensors
 	proton-vpn
+	networkmanagerapplet
 
 	# Apps
     discord
-    spotify
 	lutris
 	localsend
 	collision
 	vlc
 	gimp
+	anki
+	darktable
+	anydesk
+	kdePackages.kcalc
 
 	# Funny apps
 	hieroglyphic
@@ -113,7 +134,12 @@ in
 	kdePackages.frameworkintegration
 
 	# Customization
+    catppuccin-kvantum
+	libsForQt5.qt5ct
+	kdePackages.qt6ct
+    kdePackages.qtstyleplugin-kvantum
 	kora-icon-theme
+	numix-cursor-theme
 
 	# Nix Search TV
 	(pkgs.writeShellApplication {
@@ -126,11 +152,57 @@ in
     })
   ];
 
-  xdg.configFile = builtins.mapAttrs
+  # Cursor
+  home.pointerCursor = {
+    gtk.enable = true;
+	x11.enable = true;
+    package = pkgs.numix-cursor-theme;
+    name = "Numix-Cursor";
+    size = 24;
+  };
+
+  # Theme and icons
+  qt = {
+    enable = true;
+    platformTheme.name = "qtct";
+    # style.name = "kvantum";
+  };
+
+  gtk = {
+    enable = true;
+    
+    iconTheme = {
+      name = "kora";
+      package = pkgs.kora-icon-theme;
+    };
+  };
+
+  dconf.settings = {
+    "org/gnome/desktop/interface" = {
+      color-scheme = "prefer-dark";
+    };
+  };
+
+  xdg.configFile = {
+	"kdeglobals".text = ''
+	  [General]
+	  WidgetStyle=kvantum
+
+	  [Icons]
+	  Theme=kora
+	'';
+
+    "Kvantum/kvantum.kvconfig".text = ''
+      [General]
+      theme=catppuccin-macchiato-blue
+    '';
+
+    "Kvantum/catppuccin-macchiato-blue".source = "${catppuccin-kvantum}/share/Kvantum/catppuccin-macchiato-blue";
+    "Kvantum/breeze-dark".source = "${pkgs.kdePackages.breeze}/share/Kvantum/breeze-dark";
+  } // (builtins.mapAttrs
     (name: subpath: {
       source = create_symlink "${dotfiles}/${subpath}";
       recursive = true;
     })
-    configs;
-
+    configs);
 }

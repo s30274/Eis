@@ -7,6 +7,7 @@ import qs.components
 
 SlideMenu {
 	id: root
+
 	property WifiDevice wifiDevice: getWifiDevice()
 	property bool scanNetwork: root.visible
 	property int menuWidth: 250
@@ -36,7 +37,7 @@ SlideMenu {
 
 		Repeater {
 			model: wifiDevice.networks.values
-			required property Network modelData
+			property Network modelData
 
 			Rectangle {
 				id: wifiEntryHighlight

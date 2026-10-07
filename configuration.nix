@@ -28,8 +28,33 @@ in
 	memoryPercent = 50;
   };
 
+  swapDevices = [ {
+    device = "/var/lib/swapfile";
+    size = 16 * 1024; # 16 GB fallback size (adjust as needed)
+    priority = 1;     # Lower priority so it's only used after zram fills up
+  } ];
+
+  boot.kernel.sysctl = {
+    "vm.swappiness" = 180;
+  };
+
+  systemd.oomd.enable = true;
+
+  services.earlyoom = {
+    enable = true;
+    freeMemThreshold = 5; # Kills process if free RAM drops below 5%
+  };
+
   networking.hostName = "eis-btw";
-  networking.networkmanager.enable = true;
+
+  # Network Manager with OpenVPN
+  networking.networkmanager = {
+    enable = true;
+	plugins = with pkgs; [
+	  networkmanager-openvpn
+	];
+  };
+
 
   # Localsend ports
   networking.firewall.allowedTCPPorts = [ 53317 ];
@@ -48,8 +73,9 @@ in
 
   services.libinput.enable = true;
 
-  services.desktopManager.plasma6.enable = true;
+  services.udisks2.enable = true;
 
+  # services.desktopManager.plasma6.enable = true;
 
   programs.hyprland = {
     enable = true;
@@ -86,10 +112,17 @@ in
     git
     hyprpaper
     kdePackages.breeze
+	kdePackages.breeze-gtk
 	kdePackages.dolphin
 	kdePackages.dolphin-plugins
 	kdePackages.baloo
 	kdePackages.baloo-widgets
+	kdePackages.kio
+	kdePackages.kde-cli-tools
+	kdePackages.kate
+	kdePackages.gwenview
+	kdePackages.ark
+	kdePackages.partitionmanager
     xdg-desktop-portal
     hyprpolkitagent
     ntfs3g
@@ -106,6 +139,8 @@ in
 	unixodbc
 	glib
   ];
+
+  environment.pathsToLink = [ "/share/icons" ];
 
   environment.etc."xdg/menus/applications.menu".source =
     "${pkgs.kdePackages.plasma-workspace}/etc/xdg/menus/plasma-applications.menu";
@@ -161,9 +196,15 @@ in
     enable = true;
 	wayland.enable = true;
     extraPackages = with pkgs; [
+	  numix-cursor-theme
       kdePackages.qtmultimedia # Required for video backgrounds/audio
     ];
     theme = "sddm-astronaut-theme";
+  };
+
+  environment.variables = {
+    XCURSOR_THEME = "numix_cursor";
+    XCURSOR_SIZE = "24";
   };
 }
 

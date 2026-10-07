@@ -10,20 +10,24 @@ hl.on("hyprland.start", function()
     --hl.exec_cmd(passMan)
     hl.exec_cmd("systemctl --user start hyprpolkitagent")
     hl.exec_cmd("kwalletd6")
-    --hl.exec_cmd("nm-applet")
+    hl.exec_cmd("nm-applet")
 	--hl.exec_cmd("blueman-applet")
     hl.exec_cmd("quickshell")
+	hl.exec_cmd("hyprctl setcursor numix_cursor 24")
     --hl.exec_cmd("hyprctl reload")
 end)
 
 
 -- ENVIRONMENT VARIABLES --
 hl.env("QT_QPA_PLATFORM", "wayland")
-hl.env("QT_QPA_PLATFORMTHEME", "kde")
-
+hl.env("QT_QPA_PLATFORMTHEME", "qt6ct")
+hl.env("XCURSOR_SIZE", "24")
+hl.env("HYPRCURSOR_SIZE", "24")
+hl.env("WLR_NO_HARDWARE_CURSORS", "1")
 
 -- MONITORS ---
 hl.monitor({ output = "DP-1", mode = "2560x1440@164.96", position = "0x0", scale = 1 })
+hl.monitor({ output = "DP-2", mode = "2560x1440@279.96", position = "2560x0", scale = 1, bitdepth = 10, cm = "hdr", sdrbrightness = 1.2, sdrsaturation = 1.2 })
 
 
 --- CONFIG ---
@@ -56,6 +60,13 @@ hl.config({
 	misc = {
 		disable_hyprland_logo = true,
 		disable_splash_rendering = true,
+	},
+
+	cursor = {
+		inactive_timeout = 0,
+		hide_on_key_press = false,
+		no_hardware_cursors = true,
+		no_warps = true,
 	}
 })
 
@@ -112,16 +123,17 @@ hl.bind("XF86AudioPrev", hl.dsp.exec_cmd("playerctl previous"), { locked = true 
 for i = 1, 10 do
     local key = i % 10
     if i % 2 == 0 then
-        hl.workspace_rule( { workspace = i, monitor = "HDMI-A1" } )
-    elseif i % 2 == 1 then
         hl.workspace_rule( { workspace = i, monitor = "DP-1" } )
+    elseif i % 2 == 1 then
+        hl.workspace_rule( { workspace = i, monitor = "DP-2" } )
     end
-    hl.bind(altMod .. " + " .. key, hl.dsp.window.move( { workspace = key, follow = true } ) )
+    hl.bind(altMod .. " + " .. key, hl.dsp.window.move( { workspace = key, follow = false } ) )
 end
 
-for i = 1, 9 do
+for i = 1, 5 do
     hl.bind(mainMod .. " + " .. i, function()
-        hl.dispatch(hl.dsp.focus( { workspace = i } ))
+        hl.dispatch(hl.dsp.focus( { workspace = i * 2 -1 } ))
+        hl.dispatch(hl.dsp.focus( { workspace = i * 2 } ))
     end)
 end
 

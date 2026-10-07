@@ -10,9 +10,9 @@ import "modules/screenshot" as Screenshot
 
 ShellRoot {
 	Background {}
-	WallpaperBrowser {}
 	Topbar {}
 	Notifications {}
+	WallpaperBrowser {}
 
 	Component.onCompleted: () => {
 		Screenshot.Controller.init();		
